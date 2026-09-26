@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/.env
+.git
+desc.txt
+PLAN.md

@@ -1,0 +1,20 @@
+{
+  "name": "org-users",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev -w api",
+    "dev:web": "npm run dev -w web",
+    "build": "npm run build -w api && npm run build -w web",
+    "lint": "npm run lint -w api && npm run lint -w web",
+    "test": "npm test -w api",
+    "test:e2e": "npm run test:e2e -w api",
+    "format": "prettier --write \"apps/*/src/**/*.{ts,tsx}\" \"apps/api/test/**/*.ts\""
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
+  }
+}
