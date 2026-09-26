@@ -1,0 +1,156 @@
+// Multi-tenant model: a User is a global account; everything organization-scoped
+// (role, branch, status) lives on Membership.
+//
+// Some constraints can't be expressed in Prisma and are added as raw SQL in the
+// init migration (see prisma/migrations/*_init/migration.sql, "Raw SQL" section):
+//   - composite FK memberships(organization_id, branch_id) -> branches(organization_id, id)
+//   - unique system role keys (organization_id IS NULL)
+//   - lowercase email check, pg_trgm extension
+// Prisma's diff doesn't know about the composite FK and will always propose
+// `DROP CONSTRAINT "memberships_organization_branch_fkey"`. For schema changes use
+// `prisma migrate dev --create-only` and delete that statement before applying.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MembershipStatus {
+  ACTIVE  @map("active")
+  INVITED @map("invited")
+
+  @@map("membership_status")
+}
+
+model User {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  // Always stored lowercased (enforced by a CHECK constraint)
+  email        String   @unique
+  name         String
+  // NULL for invited users who haven't set a password yet
+  passwordHash String?  @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  memberships Membership[]
+
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "users_name_trgm_idx")
+  @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "users_email_trgm_idx")
+  @@map("users")
+}
+
+model Organization {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  branches    Branch[]
+  roles       Role[]
+  memberships Membership[]
+  modules     OrganizationModule[]
+
+  @@map("organizations")
+}
+
+model Branch {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberships  Membership[]
+
+  // Target of the composite FK from memberships
+  @@unique([organizationId, id])
+  @@unique([organizationId, name])
+  @@map("branches")
+}
+
+model Role {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  // NULL = system role available to every organization; otherwise a custom role
+  organizationId String?  @map("organization_id") @db.Uuid
+  key            String
+  name           String
+  // Hierarchy: a member can only assign roles / manage members below their own level
+  level          Int
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  organization Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions  RolePermission[]
+  memberships  Membership[]
+
+  @@unique([organizationId, key])
+  @@map("roles")
+}
+
+model Permission {
+  id          String @id @default(uuid(7)) @db.Uuid
+  // e.g. "users.read", "users.update"
+  key         String @unique
+  description String
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model Membership {
+  id             String           @id @default(uuid(7)) @db.Uuid
+  userId         String           @map("user_id") @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  roleId         String           @map("role_id") @db.Uuid
+  branchId       String?          @map("branch_id") @db.Uuid
+  status         MembershipStatus @default(ACTIVE)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  // Soft delete: re-adding the user restores this row, so the unique key below holds
+  deletedAt      DateTime?        @map("deleted_at") @db.Timestamptz(3)
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // NoAction (checked at end of statement) rather than Restrict: deleting an
+  // organization cascades to both roles and memberships in one statement
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: NoAction)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId, deletedAt])
+  @@index([organizationId, roleId])
+  @@index([organizationId, branchId])
+  @@index([roleId])
+  @@map("memberships")
+}
+
+model OrganizationModule {
+  organizationId String   @map("organization_id") @db.Uuid
+  // e.g. "users", "crm", "warehouse"; a string so new modules need no migration
+  moduleKey      String   @map("module_key")
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, moduleKey])
+  @@map("organization_modules")
+}

@@ -7,9 +7,9 @@ COPY apps/api/package.json apps/api/
 RUN npm ci -w api --include-workspace-root=false
 
 COPY apps/api apps/api
-RUN npm run build -w api
+RUN npm run prisma:generate -w api && npm run build -w api
 
 WORKDIR /app/apps/api
-ENV NODE_ENV=production
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+# Applies pending migrations and seeds demo data (seed is idempotent) before start
+CMD ["npm", "run", "start:docker"]

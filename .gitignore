@@ -14,3 +14,6 @@ coverage/
 # Local working files (not part of the submission)
 desc.txt
 PLAN.md
+
+# Generated Prisma client
+apps/api/src/generated/
