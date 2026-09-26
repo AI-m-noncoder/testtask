@@ -8,6 +8,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard.js';
 import { validateEnv } from './config.js';
 import { HealthController } from './health/health.controller.js';
 import { MeModule } from './me/me.module.js';
+import { UsersModule } from './users/users.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
 @Module({
@@ -17,6 +18,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     AuthModule,
     AccessModule,
     MeModule,
+    UsersModule,
   ],
   controllers: [HealthController],
   providers: [
