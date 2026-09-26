@@ -6,7 +6,11 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['test/**/*.e2e-spec.ts'],
-    // e2e tests share one database, so files must not run in parallel
+    globalSetup: ['test/support/global-setup.ts'],
+    setupFiles: ['test/support/env.ts'],
+    // Files share one database, so they must not run in parallel
     fileParallelism: false,
+    testTimeout: 20_000,
+    hookTimeout: 30_000,
   },
 });
