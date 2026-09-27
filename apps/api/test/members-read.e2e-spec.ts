@@ -15,7 +15,7 @@ interface Member {
   name: string;
   status: 'active' | 'invited';
   role: { id: string; key: string; level: number };
-  branch: { id: string; name: string } | null;
+  branch: { id: string; name: string; address: string | null } | null;
   joinedAt: string;
 }
 interface Page {
@@ -233,6 +233,22 @@ describe('Organization members: reading (e2e)', () => {
         'Астана',
         'Шымкент',
       ]);
+    });
+
+    it('branches carry an address and a headcount that matches the branch filter', async () => {
+      const branches: Array<{ id: string; address: string; memberCount: number }> = (
+        await timur.get(`${base}/branches`).expect(200)
+      ).body;
+      for (const branch of branches) {
+        expect(branch.address).toMatch(/^г\. /);
+        expect(branch.memberCount).toBe((await list(`?branchId=${branch.id}`)).total);
+      }
+      const [member] = (await list(`?branchId=${branches[0].id}&pageSize=1`)).items;
+      expect(member.branch).toEqual({
+        id: branches[0].id,
+        name: 'Алматы',
+        address: branches[0].address,
+      });
     });
   });
 });

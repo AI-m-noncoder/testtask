@@ -82,27 +82,43 @@ const ORGANIZATIONS = [
   {
     key: 'alpha',
     name: 'Альфа Логистик',
-    branches: ['Алматы', 'Астана', 'Шымкент'],
+    branches: [
+      { name: 'Алматы', address: 'г. Алматы, пр. Абая, 150' },
+      { name: 'Астана', address: 'г. Астана, ул. Кенесары, 40' },
+      { name: 'Шымкент', address: 'г. Шымкент, пр. Тауке хана, 12' },
+    ],
     modules: [Module.Users, Module.Crm, Module.Warehouse],
   },
   {
     key: 'beta',
     name: 'Бета Ритейл',
-    branches: ['Центральный', 'Северный'],
+    branches: [
+      { name: 'Центральный', address: 'г. Алматы, ул. Толе би, 101' },
+      { name: 'Северный', address: 'г. Алматы, мкр. Жетысу-2, 7' },
+    ],
     modules: [Module.Users, Module.Sales, Module.Reports],
   },
   {
     key: 'gamma',
     name: 'Гамма Строй',
-    branches: ['Главный офис', 'Объект №1', 'Объект №2'],
+    branches: [
+      { name: 'Главный офис', address: 'г. Астана, пр. Мангилик Ел, 55' },
+      { name: 'Объект №1', address: 'г. Астана, ул. Сыганак, 18' },
+      { name: 'Объект №2', address: 'г. Косшы, ул. Республики, 3' },
+    ],
     modules: [Module.Users, Module.Tasks],
   },
   // "users" module intentionally not enabled: demonstrates the module check
-  { key: 'delta', name: 'Дельта Консалтинг', branches: ['Офис'], modules: [Module.Crm] },
+  {
+    key: 'delta',
+    name: 'Дельта Консалтинг',
+    branches: [{ name: 'Офис', address: 'г. Караганда, ул. Бухар-Жырау, 64' }],
+    modules: [Module.Crm],
+  },
 ] as const satisfies ReadonlyArray<{
   key: string;
   name: string;
-  branches: readonly string[];
+  branches: ReadonlyArray<{ name: string; address: string }>;
   modules: readonly ModuleKey[];
 }>;
 type OrgKey = (typeof ORGANIZATIONS)[number]['key'];
@@ -179,7 +195,7 @@ export async function seed(prisma: PrismaClient): Promise<boolean> {
         const created = await tx.organization.create({
           data: {
             name: org.name,
-            branches: { create: org.branches.map((name) => ({ name })) },
+            branches: { create: org.branches.map((b) => ({ name: b.name, address: b.address })) },
             modules: { create: org.modules.map((moduleKey) => ({ moduleKey })) },
           },
           include: { branches: true },

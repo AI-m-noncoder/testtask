@@ -122,7 +122,14 @@ export function MembersTable(props: MembersTableProps) {
                 </Table.Td>
                 <Table.Td>
                   {m.branch ? (
-                    <Text size="sm">{m.branch.name}</Text>
+                    <div style={{ minWidth: 0 }}>
+                      <Text size="sm">{m.branch.name}</Text>
+                      {m.branch.address && (
+                        <Text size="xs" c="dimmed" truncate>
+                          {m.branch.address}
+                        </Text>
+                      )}
+                    </div>
                   ) : (
                     <Text size="sm" c="dimmed">
                       Без филиала

@@ -51,7 +51,7 @@ export function MembersFilters(props: MembersFiltersProps) {
         clearable
         data={[
           { value: 'none', label: 'Без филиала' },
-          ...branches.map((b) => ({ value: b.id, label: b.name })),
+          ...branches.map((b) => ({ value: b.id, label: `${b.name} — ${b.memberCount} чел.` })),
         ]}
         value={query.branchId ?? null}
         onChange={(v) => onChange({ branchId: v ?? undefined })}

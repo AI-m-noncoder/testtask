@@ -7,7 +7,7 @@ export const memberSelect = {
   status: true,
   user: { select: { id: true, email: true, name: true } },
   role: { select: { id: true, key: true, name: true, level: true } },
-  branch: { select: { id: true, name: true } },
+  branch: { select: { id: true, name: true, address: true } },
 } satisfies Prisma.MembershipSelect;
 
 type MemberRow = Prisma.MembershipGetPayload<{ select: typeof memberSelect }>;

@@ -115,7 +115,20 @@ export function MemberDrawer({
               <StatusBadge status={member.data.status} />
             </Field>
             <Field label="Филиал">
-              <Text size="sm">{member.data.branch?.name ?? 'Без филиала'}</Text>
+              {member.data.branch ? (
+                <>
+                  <Text size="sm">{member.data.branch.name}</Text>
+                  {member.data.branch.address && (
+                    <Text size="xs" c="dimmed">
+                      {member.data.branch.address}
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text size="sm" c="dimmed">
+                  Без филиала
+                </Text>
+              )}
             </Field>
             <Field label="Добавлен в организацию">
               <Text size="sm">{formatDateTime(member.data.joinedAt)}</Text>

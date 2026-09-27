@@ -12,9 +12,16 @@ export interface RoleOption extends Role {
   assignable: boolean;
 }
 
-export interface Branch {
+/** A member's branch */
+export interface BranchRef {
   id: string;
   name: string;
+  address: string | null;
+}
+
+/** GET /branches: also the number of current members */
+export interface Branch extends BranchRef {
+  memberCount: number;
 }
 
 export interface Me {
@@ -39,7 +46,7 @@ export interface Member {
   name: string;
   status: MemberStatus;
   role: Role;
-  branch: Branch | null;
+  branch: BranchRef | null;
   joinedAt: string;
   updatedAt: string;
 }

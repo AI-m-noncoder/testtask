@@ -208,12 +208,22 @@ export class OrganizationUsersService {
     }));
   }
 
-  listBranches(organizationId: string) {
-    return this.prisma.branch.findMany({
+  /** Branches with their current headcount (active and invited members) */
+  async listBranches(organizationId: string) {
+    const branches = await this.prisma.branch.findMany({
       where: { organizationId },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        _count: { select: { memberships: { where: { deletedAt: null } } } },
+      },
       orderBy: { name: 'asc' },
     });
+    return branches.map(({ _count, ...branch }) => ({
+      ...branch,
+      memberCount: _count.memberships,
+    }));
   }
 
   /** Target must be a current member of *this* organization (IDOR protection) and below the caller */
