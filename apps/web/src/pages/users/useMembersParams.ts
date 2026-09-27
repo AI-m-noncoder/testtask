@@ -56,7 +56,9 @@ export function useMembersParams() {
     [setParams],
   );
 
-  const selectedMemberId = params.get('member');
+  // A hand-edited ?member= that isn't an id is treated as "nothing opened"
+  const memberParam = params.get('member');
+  const selectedMemberId = memberParam && UUID_RE.test(memberParam) ? memberParam : null;
   const setSelectedMember = useCallback(
     (id: string | null) =>
       setParams((prev) => {

@@ -1,4 +1,5 @@
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { HttpExceptionFilter } from './common/errors/http-exception.filter.js';
 
 /**
@@ -6,6 +7,8 @@ import { HttpExceptionFilter } from './common/errors/http-exception.filter.js';
  * global configuration.
  */
 export function configureApp(app: INestApplication) {
+  // Don't advertise the framework
+  (app as NestExpressApplication).disable('x-powered-by');
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({

@@ -178,16 +178,41 @@ describe('Organization members: changes and edge cases (e2e)', () => {
       expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
       expect(await fx.prisma.user.count({ where: { email: 'race@example.com' } })).toBe(1);
     });
+
+    it('concurrent restores of a removed member: exactly one succeeds, the other gets 409', async () => {
+      const elenaId = await fx.userId('elena@example.com');
+      await ivan.delete(`${alpha}/users/${elenaId}`).expect(204);
+
+      const body = { email: 'elena@example.com', roleId: roles.employee };
+      const results = await Promise.all([
+        ivan.post(`${alpha}/users`, body),
+        ivan.post(`${alpha}/users`, body),
+      ]);
+      expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    });
+
+    it('the same new email added to two organizations at once: both succeed, one account', async () => {
+      const email = 'shared-race@example.com';
+      const results = await Promise.all([
+        ivan.post(`${alpha}/users`, { email, name: 'Гонка', roleId: roles.employee }),
+        ivan.post(`${beta}/users`, { email, name: 'Гонка', roleId: roles.employee }),
+      ]);
+      expect(results.map((r) => r.status)).toEqual([201, 201]);
+      expect(await fx.prisma.user.count({ where: { email } })).toBe(1);
+      expect(await membershipsOf(email)).toHaveLength(2);
+    });
   });
 
   describe('PATCH /users/:userId — change role / branch', () => {
     it('changes role and branch', async () => {
       const target = await fx.memberId('alpha', 'employee');
       const [, branchId] = await fx.branchIds('alpha');
+      const before = await ivan.get(`${alpha}/users/${target}`).expect(200);
       const res = await ivan
         .patch(`${alpha}/users/${target}`, { roleId: roles.manager, branchId })
         .expect(200);
       expect(res.body).toMatchObject({ role: { key: 'manager' }, branch: { id: branchId } });
+      expect(new Date(res.body.updatedAt) > new Date(before.body.updatedAt)).toBe(true);
     });
 
     it('branchId: null removes the branch, omitted leaves it unchanged', async () => {
@@ -206,6 +231,12 @@ describe('Organization members: changes and edge cases (e2e)', () => {
 
     it('400 when there is nothing to update', async () => {
       await ivan.patch(`${alpha}/users/${await fx.memberId('alpha', 'employee')}`, {}).expect(400);
+    });
+
+    it('400 for roleId: null (a member always has a role)', async () => {
+      const target = await fx.memberId('alpha', 'employee');
+      const res = await ivan.patch(`${alpha}/users/${target}`, { roleId: null }).expect(400);
+      expect(res.body.code).toBe('VALIDATION_ERROR');
     });
 
     it('400 for a branch of another organization', async () => {
@@ -252,6 +283,21 @@ describe('Organization members: changes and edge cases (e2e)', () => {
     it('409 LAST_ADMIN when the only admin tries to demote themselves', async () => {
       const res = await ivan
         .patch(`${alpha}/users/${await fx.userId('ivan@example.com')}`, { roleId: roles.employee })
+        .expect(409);
+      expect(res.body.code).toBe('LAST_ADMIN');
+    });
+
+    it('a custom role keyed "admin" does not count as an administrator', async () => {
+      const lookalike = await fx.prisma.role.create({
+        data: {
+          key: 'admin',
+          name: 'Почти админ',
+          level: 90,
+          organizationId: await fx.orgId('alpha'),
+        },
+      });
+      const res = await ivan
+        .patch(`${alpha}/users/${await fx.userId('ivan@example.com')}`, { roleId: lookalike.id })
         .expect(409);
       expect(res.body.code).toBe('LAST_ADMIN');
     });

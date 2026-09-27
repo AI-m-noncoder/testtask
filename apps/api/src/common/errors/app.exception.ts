@@ -3,7 +3,14 @@ import { ErrorCode, type ErrorBody } from './error-codes.js';
 
 /** Domain error with a stable machine-readable code the frontend can rely on */
 export class AppException extends HttpException {
-  constructor(status: HttpStatus, code: ErrorCode, message: string, details?: unknown) {
+  constructor(
+    status: HttpStatus,
+    code: ErrorCode,
+    message: string,
+    details?: unknown,
+    /** Extra response headers, e.g. Retry-After */
+    readonly headers?: Record<string, string>,
+  ) {
     super({ code, message, details } satisfies ErrorBody, status);
   }
 

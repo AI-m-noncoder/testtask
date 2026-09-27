@@ -28,9 +28,12 @@ const DEMO_ACCOUNTS = [
   { email: 'elena@example.com', roles: 'Альфа — сотрудник' },
 ];
 
-/** Only same-app paths, so ?redirect= can't send the user to another site */
+/**
+ * Only same-app paths, so ?redirect= can't send the user to another site.
+ * Browsers read "\" as "/", so "/\evil.com" is as dangerous as "//evil.com".
+ */
 const safeRedirect = (value: string | null) =>
-  value?.startsWith('/') && !value.startsWith('//') ? value : '/orgs';
+  value?.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '/orgs';
 
 export function LoginPage() {
   const navigate = useNavigate();

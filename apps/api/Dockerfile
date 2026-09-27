@@ -10,6 +10,8 @@ COPY apps/api apps/api
 RUN npm run prisma:generate -w api && npm run build -w api
 
 WORKDIR /app/apps/api
+# Run without root privileges (the node user comes with the base image)
+USER node
 EXPOSE 3000
 # Applies pending migrations and seeds demo data (seed is idempotent) before start
 CMD ["npm", "run", "start:docker"]

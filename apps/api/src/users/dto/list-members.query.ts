@@ -23,9 +23,11 @@ export const NO_BRANCH = 'none';
 const UUID_OR_NONE = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|none)$/i;
 
 export class ListMembersQueryDto {
+  // Upper bound keeps the offset (page × pageSize) within what the database accepts
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(1_000_000)
   page: number = 1;
 
   @Type(() => Number)

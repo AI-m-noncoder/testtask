@@ -31,6 +31,13 @@ const ORDER_BY: Record<
 /** Escapes LIKE wildcards so a search for "_" or "%" matches literally */
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, '\\$&');
 
+/** The "last admin" invariant is about the system admin role, not a custom role that reuses its key */
+const isSystemAdmin = (role: { key: string; organizationId: string | null }) =>
+  role.key === SystemRole.Admin && role.organizationId === null;
+
+const alreadyMember = () =>
+  AppException.conflict(ErrorCode.AlreadyMember, 'User is already a member of this organization');
+
 @Injectable()
 export class OrganizationUsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -98,44 +105,52 @@ export class OrganizationUsersService {
               'name should not be empty',
             ]);
           }
-          user = await tx.user.create({ data: { email: dto.email, name: dto.name } });
+          // ON CONFLICT DO NOTHING: another organization may be inviting the same email
+          // right now; then both link to the one account instead of one request failing
+          await tx.user.createMany({
+            data: { email: dto.email, name: dto.name },
+            skipDuplicates: true,
+          });
+          user = await tx.user.findUniqueOrThrow({ where: { email: dto.email } });
         }
         // An existing account's name is not overwritten: it's shared with other organizations
 
         const existing = await tx.membership.findUnique({
           where: { userId_organizationId: { userId: user.id, organizationId } },
+          select: { id: true, deletedAt: true },
         });
-        if (existing && !existing.deletedAt) {
-          throw AppException.conflict(
-            ErrorCode.AlreadyMember,
-            'User is already a member of this organization',
-          );
-        }
+        if (existing && !existing.deletedAt) throw alreadyMember();
 
         const data = {
           roleId: role.id,
           branchId: dto.branchId ?? null,
           status: user.passwordHash ? ('ACTIVE' as const) : ('INVITED' as const),
         };
-        const row = existing
-          ? await tx.membership.update({
-              where: { id: existing.id },
-              data: { ...data, deletedAt: null, createdAt: new Date() },
-              select: memberSelect,
-            })
-          : await tx.membership.create({
-              data: { ...data, userId: user.id, organizationId },
-              select: memberSelect,
-            });
+        if (!existing) {
+          const row = await tx.membership.create({
+            data: { ...data, userId: user.id, organizationId },
+            select: memberSelect,
+          });
+          return toMember(row);
+        }
+
+        // Restore. The deletedAt condition makes a concurrent restore of the same member
+        // wait for this row lock and then match nothing, instead of both succeeding
+        const { count } = await tx.membership.updateMany({
+          where: { id: existing.id, deletedAt: { not: null } },
+          data: { ...data, deletedAt: null, createdAt: new Date() },
+        });
+        if (count === 0) throw alreadyMember();
+        const row = await tx.membership.findUniqueOrThrow({
+          where: { id: existing.id },
+          select: memberSelect,
+        });
         return toMember(row);
       });
     } catch (error) {
-      // Concurrent request added the same person first
+      // Concurrent request added the same person first (unique user_id + organization_id)
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw AppException.conflict(
-          ErrorCode.AlreadyMember,
-          'User is already a member of this organization',
-        );
+        throw alreadyMember();
       }
       throw error;
     }
@@ -151,18 +166,18 @@ export class OrganizationUsersService {
 
       if (dto.roleId !== undefined && dto.roleId !== target.roleId) {
         const role = await this.findAssignableRole(tx, ctx, dto.roleId);
-        if (target.role.key === SystemRole.Admin && role.key !== SystemRole.Admin) {
+        if (isSystemAdmin(target.role) && !isSystemAdmin(role)) {
           await this.ensureNotLastAdmin(tx, ctx.organizationId, target.id);
         }
       }
       if (dto.branchId) await this.ensureBranch(tx, ctx.organizationId, dto.branchId);
 
-      const row = await tx.membership.update({
+      await this.writeIfUnchanged(tx, target, {
+        ...(dto.roleId !== undefined && { roleId: dto.roleId }),
+        ...(dto.branchId !== undefined && { branchId: dto.branchId }),
+      });
+      const row = await tx.membership.findUniqueOrThrow({
         where: { id: target.id },
-        data: {
-          ...(dto.roleId !== undefined && { roleId: dto.roleId }),
-          ...(dto.branchId !== undefined && { branchId: dto.branchId }),
-        },
         select: memberSelect,
       });
       return toMember(row);
@@ -173,10 +188,10 @@ export class OrganizationUsersService {
   async remove(ctx: OrgContext, userId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const target = await this.findManageableTarget(tx, ctx, userId);
-      if (target.role.key === SystemRole.Admin) {
+      if (isSystemAdmin(target.role)) {
         await this.ensureNotLastAdmin(tx, ctx.organizationId, target.id);
       }
-      await tx.membership.update({ where: { id: target.id }, data: { deletedAt: new Date() } });
+      await this.writeIfUnchanged(tx, target, { deletedAt: new Date() });
     });
   }
 
@@ -205,7 +220,11 @@ export class OrganizationUsersService {
   private async findManageableTarget(tx: Tx, ctx: OrgContext, userId: string) {
     const target = await tx.membership.findFirst({
       where: { organizationId: ctx.organizationId, userId, deletedAt: null },
-      select: { id: true, roleId: true, role: { select: { key: true, level: true } } },
+      select: {
+        id: true,
+        roleId: true,
+        role: { select: { key: true, level: true, organizationId: true } },
+      },
     });
     if (!target) throw AppException.notFound('Member not found');
 
@@ -225,7 +244,7 @@ export class OrganizationUsersService {
         id: roleId,
         OR: [{ organizationId: null }, { organizationId: ctx.organizationId }],
       },
-      select: { id: true, key: true, level: true },
+      select: { id: true, key: true, level: true, organizationId: true },
     });
     if (!role) throw AppException.badRequest('Role not found', ['roleId is invalid']);
 
@@ -236,6 +255,28 @@ export class OrganizationUsersService {
       );
     }
     return role;
+  }
+
+  /**
+   * The permission checks were made against the target's current role, which was
+   * read without a lock. The write applies only if that role is still in place, so
+   * e.g. a manager's edit can't land on someone who was promoted to admin meanwhile.
+   */
+  private async writeIfUnchanged(
+    tx: Tx,
+    target: { id: string; roleId: string },
+    data: Prisma.MembershipUncheckedUpdateManyInput,
+  ) {
+    const { count } = await tx.membership.updateMany({
+      where: { id: target.id, roleId: target.roleId, deletedAt: null },
+      data,
+    });
+    if (count === 0) {
+      throw AppException.conflict(
+        ErrorCode.Conflict,
+        'The member was changed by someone else at the same time. Reload and try again.',
+      );
+    }
   }
 
   /** Also enforced by the composite FK; checked here for a clear error message */

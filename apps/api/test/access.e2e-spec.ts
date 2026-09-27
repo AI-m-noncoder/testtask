@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { LoginThrottleService } from '../src/auth/login-throttle.service.js';
 import {
   as,
   type Client,
@@ -50,6 +51,33 @@ describe('Authentication and organization access (e2e)', () => {
         .post('/api/auth/login')
         .send({ email: ' Ivan@Example.COM ', password: 'password' })
         .expect(200);
+    });
+
+    it('throttles repeated failed logins for an email, without blocking other emails', async () => {
+      const attempt = (email: string, password: string) =>
+        request(app.getHttpServer()).post('/api/auth/login').send({ email, password });
+
+      for (let i = 0; i < 5; i++) await attempt('maria@example.com', 'wrong').expect(401);
+      const blocked = await attempt('maria@example.com', 'password').expect(429);
+      expect(blocked.body.code).toBe('TOO_MANY_REQUESTS');
+      expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0);
+
+      await attempt('oleg@example.com', 'password').expect(200);
+      // Unblock for the tests below that log in as Мария
+      app.get(LoginThrottleService).reset('maria@example.com');
+    });
+
+    it('returns 413 with the common error shape for an oversized body', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: 'a'.repeat(200_000), password: 'x' })
+        .expect(413);
+      expect(res.body.code).toBe('PAYLOAD_TOO_LARGE');
+    });
+
+    it('does not advertise the server framework', async () => {
+      const res = await request(app.getHttpServer()).get('/api/health').expect(200);
+      expect(res.headers['x-powered-by']).toBeUndefined();
     });
 
     it('does not let invited users (no password yet) log in', async () => {

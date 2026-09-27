@@ -166,6 +166,7 @@ describe('Organization members: reading (e2e)', () => {
     it.each([
       ['pageSize over the limit', '?pageSize=101'],
       ['page below 1', '?page=0'],
+      ['absurdly large page (offset overflow)', '?page=1e20'],
       ['non-numeric page', '?page=abc'],
       ['unknown sort field (no raw column names)', '?sortBy=password_hash'],
       ['bad sort order', '?sortOrder=sideways'],

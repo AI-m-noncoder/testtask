@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
+import { LoginThrottleService } from './login-throttle.service.js';
 
 @Module({
   imports: [
@@ -11,12 +12,14 @@ import { JwtAuthGuard } from './jwt-auth.guard.js';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),
-        signOptions: { expiresIn: config.get('JWT_EXPIRES_IN', '12h') },
+        signOptions: { algorithm: 'HS256', expiresIn: config.get('JWT_EXPIRES_IN', '12h') },
+        // Pinned so a token can't pick its own algorithm
+        verifyOptions: { algorithms: ['HS256'] },
       }),
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard],
+  providers: [AuthService, JwtAuthGuard, LoginThrottleService],
   exports: [JwtAuthGuard],
 })
 export class AuthModule {}

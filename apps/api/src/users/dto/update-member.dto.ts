@@ -1,7 +1,8 @@
-import { IsOptional, IsUUID } from 'class-validator';
+import { IsOptional, IsUUID, ValidateIf } from 'class-validator';
 
 export class UpdateMemberDto {
-  @IsOptional()
+  // Not @IsOptional(): it would also let `null` through, and a member always has a role
+  @ValidateIf((_, value) => value !== undefined)
   @IsUUID('all')
   roleId?: string;
 
