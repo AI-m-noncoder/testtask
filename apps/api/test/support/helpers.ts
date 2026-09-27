@@ -84,10 +84,10 @@ export function fixtures(app: INestApplication) {
             user: {
               email: {
                 notIn: [
-                  'ivan@example.com',
-                  'maria@example.com',
-                  'oleg@example.com',
-                  'elena@example.com',
+                  'timur@example.com',
+                  'aiganym@example.com',
+                  'rustem@example.com',
+                  'tamerlan@example.com',
                 ],
               },
             },

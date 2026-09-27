@@ -20,12 +20,12 @@ import { errorMessage } from '../lib/errors';
 
 const DEMO_ACCOUNTS = [
   {
-    email: 'ivan@example.com',
+    email: 'timur@example.com',
     roles: 'Альфа — админ, Бета — менеджер, Гамма — сотрудник, Дельта — модуль отключён',
   },
-  { email: 'maria@example.com', roles: 'Бета — админ' },
-  { email: 'oleg@example.com', roles: 'Гамма — админ' },
-  { email: 'elena@example.com', roles: 'Альфа — сотрудник' },
+  { email: 'aiganym@example.com', roles: 'Бета — админ' },
+  { email: 'rustem@example.com', roles: 'Гамма — админ' },
+  { email: 'tamerlan@example.com', roles: 'Альфа — сотрудник' },
 ];
 
 /**

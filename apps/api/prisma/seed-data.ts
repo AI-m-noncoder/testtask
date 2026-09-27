@@ -2,10 +2,10 @@
  * Demo data, shared by the CLI seed (prisma/seed.ts) and e2e tests.
  *
  * Demo accounts (password: "password"):
- *   ivan@example.com   — Альфа: admin, Бета: manager, Гамма: employee, Дельта: admin (module "users" off)
- *   maria@example.com  — Бета: admin
- *   oleg@example.com   — Гамма: admin
- *   elena@example.com  — Альфа: employee
+ *   timur@example.com     — Альфа: admin, Бета: manager, Гамма: employee, Дельта: admin (module "users" off)
+ *   aiganym@example.com   — Бета: admin
+ *   rustem@example.com    — Гамма: admin
+ *   tamerlan@example.com  — Альфа: employee
  */
 import bcrypt from 'bcryptjs';
 import type { PrismaClient } from '../src/generated/prisma/client.js';
@@ -48,7 +48,6 @@ const FIRST_NAMES = [
   ['Светлана', 'svetlana'],
   ['Айгерим', 'aigerim'],
   ['Дамир', 'damir'],
-  ['Тимур', 'timur'],
   ['Динара', 'dinara'],
 ] as const;
 const LAST_NAMES = [
@@ -113,8 +112,8 @@ const DEMO_USERS: Array<{
   memberships: Partial<Record<OrgKey, SystemRoleKey>>;
 }> = [
   {
-    email: 'ivan@example.com',
-    name: 'Иван Петров',
+    email: 'timur@example.com',
+    name: 'Тимур Бекенов',
     memberships: {
       alpha: SystemRole.Admin,
       beta: SystemRole.Manager,
@@ -122,9 +121,21 @@ const DEMO_USERS: Array<{
       delta: SystemRole.Admin,
     },
   },
-  { email: 'maria@example.com', name: 'Мария Иванова', memberships: { beta: SystemRole.Admin } },
-  { email: 'oleg@example.com', name: 'Олег Сидоров', memberships: { gamma: SystemRole.Admin } },
-  { email: 'elena@example.com', name: 'Елена Орлова', memberships: { alpha: SystemRole.Employee } },
+  {
+    email: 'aiganym@example.com',
+    name: 'Айганым Нурланова',
+    memberships: { beta: SystemRole.Admin },
+  },
+  {
+    email: 'rustem@example.com',
+    name: 'Рустем Жумабаев',
+    memberships: { gamma: SystemRole.Admin },
+  },
+  {
+    email: 'tamerlan@example.com',
+    name: 'Тамерлан Сарсенов',
+    memberships: { alpha: SystemRole.Employee },
+  },
 ];
 
 const GENERATED_USERS_PER_ORG = 25;

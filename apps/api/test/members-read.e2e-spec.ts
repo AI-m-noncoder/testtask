@@ -28,18 +28,18 @@ interface Page {
 describe('Organization members: reading (e2e)', () => {
   let app: INestApplication;
   let fx: Fixtures;
-  let ivan: Client;
+  let timur: Client;
   let base: string;
 
   const list = async (query = '') =>
-    (await ivan.get(`${base}/users${query}`).expect(200)).body as Page;
+    (await timur.get(`${base}/users${query}`).expect(200)).body as Page;
   const all = async (query = '') => list(`?pageSize=100${query ? `&${query}` : ''}`);
 
   beforeAll(async () => {
     app = await createTestApp();
     await resetDatabase(app);
     fx = fixtures(app);
-    ivan = as(app, await login(app, 'ivan@example.com'));
+    timur = as(app, await login(app, 'timur@example.com'));
     base = `/organizations/${await fx.orgId('alpha')}`;
   });
 
@@ -80,14 +80,14 @@ describe('Organization members: reading (e2e)', () => {
 
   describe('search', () => {
     it('matches name case-insensitively (Cyrillic)', async () => {
-      const { items } = await all('search=' + encodeURIComponent('иВАН'));
-      expect(items.map((m) => m.email)).toContain('ivan@example.com');
-      for (const m of items) expect(`${m.name} ${m.email}`.toLowerCase()).toContain('иван');
+      const { items } = await all('search=' + encodeURIComponent('тИМУР'));
+      expect(items.map((m) => m.email)).toContain('timur@example.com');
+      for (const m of items) expect(`${m.name} ${m.email}`.toLowerCase()).toContain('тимур');
     });
 
     it('matches email', async () => {
-      const { items } = await all('search=elena@');
-      expect(items.map((m) => m.email)).toEqual(['elena@example.com']);
+      const { items } = await all('search=tamerlan@');
+      expect(items.map((m) => m.email)).toEqual(['tamerlan@example.com']);
     });
 
     it('treats LIKE wildcards literally', async () => {
@@ -96,7 +96,7 @@ describe('Organization members: reading (e2e)', () => {
     });
 
     it('ignores surrounding whitespace', async () => {
-      expect((await all('search=%20elena%20')).total).toBe(1);
+      expect((await all('search=%20tamerlan%20')).total).toBe(1);
     });
   });
 
@@ -129,8 +129,8 @@ describe('Organization members: reading (e2e)', () => {
 
     it('combines filters with search', async () => {
       const adminId = await fx.roleId('admin');
-      const { items } = await all(`roleId=${adminId}&search=ivan`);
-      expect(items.map((m) => m.email)).toEqual(['ivan@example.com']);
+      const { items } = await all(`roleId=${adminId}&search=timur`);
+      expect(items.map((m) => m.email)).toEqual(['timur@example.com']);
     });
 
     it('a branch of another organization matches nothing', async () => {
@@ -174,50 +174,50 @@ describe('Organization members: reading (e2e)', () => {
       ['unknown status', '?status=deleted'],
       ['unknown parameter', '?foo=bar'],
     ])('rejects %s with 400', async (_, query) => {
-      const res = await ivan.get(`${base}/users${query}`).expect(400);
+      const res = await timur.get(`${base}/users${query}`).expect(400);
       expect(res.body.code).toBe('VALIDATION_ERROR');
     });
   });
 
   describe('GET /users/:userId', () => {
     it('returns the member with role and branch in this organization', async () => {
-      const id = await fx.userId('ivan@example.com');
-      const res = await ivan.get(`${base}/users/${id}`).expect(200);
+      const id = await fx.userId('timur@example.com');
+      const res = await timur.get(`${base}/users/${id}`).expect(200);
       expect(res.body).toMatchObject({
         id,
-        email: 'ivan@example.com',
+        email: 'timur@example.com',
         role: { key: 'admin' },
         status: 'active',
       });
     });
 
     it('does not expose the member’s other organizations', async () => {
-      const res = await ivan
-        .get(`${base}/users/${await fx.userId('ivan@example.com')}`)
+      const res = await timur
+        .get(`${base}/users/${await fx.userId('timur@example.com')}`)
         .expect(200);
       expect(JSON.stringify(res.body)).not.toMatch(/Бета|Гамма|Дельта/);
       expect(res.body).not.toHaveProperty('passwordHash');
     });
 
     it('404 for a user who exists but is a member of another organization only (IDOR)', async () => {
-      const mariaId = await fx.userId('maria@example.com');
-      const res = await ivan.get(`${base}/users/${mariaId}`).expect(404);
+      const aiganymId = await fx.userId('aiganym@example.com');
+      const res = await timur.get(`${base}/users/${aiganymId}`).expect(404);
       expect(res.body.code).toBe('NOT_FOUND');
     });
 
     it('400 for a malformed user id', async () => {
-      await ivan.get(`${base}/users/123`).expect(400);
+      await timur.get(`${base}/users/123`).expect(400);
     });
   });
 
   describe('reference data', () => {
     it('roles are marked assignable relative to the caller', async () => {
-      const betaIvan = (
-        await ivan.get(`/organizations/${await fx.orgId('beta')}/roles`).expect(200)
+      const betaTimur = (
+        await timur.get(`/organizations/${await fx.orgId('beta')}/roles`).expect(200)
       ).body;
       expect(
         Object.fromEntries(
-          betaIvan.map((r: { key: string; assignable: boolean }) => [r.key, r.assignable]),
+          betaTimur.map((r: { key: string; assignable: boolean }) => [r.key, r.assignable]),
         ),
       ).toEqual({
         admin: false,
@@ -227,7 +227,7 @@ describe('Organization members: reading (e2e)', () => {
     });
 
     it('branches are limited to the organization', async () => {
-      const res = await ivan.get(`${base}/branches`).expect(200);
+      const res = await timur.get(`${base}/branches`).expect(200);
       expect(res.body.map((b: { name: string }) => b.name)).toEqual([
         'Алматы',
         'Астана',
