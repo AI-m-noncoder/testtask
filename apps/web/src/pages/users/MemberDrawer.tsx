@@ -3,6 +3,7 @@ import {
   Button,
   Divider,
   Drawer,
+  getDefaultZIndex,
   Group,
   SimpleGrid,
   Skeleton,
@@ -58,6 +59,8 @@ export function MemberDrawer({
       position="right"
       title="Информация о пользователе"
       size="md"
+      // One layer below modals: edit and delete confirmation open on top of the drawer
+      zIndex={getDefaultZIndex('modal') - 1}
     >
       {member.isPending && (
         <Stack>
