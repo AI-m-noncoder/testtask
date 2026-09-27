@@ -18,20 +18,12 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router';
 import { api, tokenStorage } from '../api/client';
 import { errorMessage } from '../lib/errors';
 
-// One line per organization the account belongs to
 const DEMO_ACCOUNTS = [
-  {
-    email: 'timur@example.com',
-    roles: [
-      'Альфа — админ',
-      'Бета — менеджер',
-      'Гамма — сотрудник',
-      'Дельта — админ, модуль отключён',
-    ],
-  },
-  { email: 'aiganym@example.com', roles: ['Бета — админ'] },
-  { email: 'rustem@example.com', roles: ['Гамма — админ'] },
-  { email: 'tamerlan@example.com', roles: ['Альфа — сотрудник'] },
+  // Also a manager in Бета, an employee in Гамма and an admin in Дельта (module off)
+  { email: 'timur@example.com', roles: 'Альфа — админ, +3 компании' },
+  { email: 'aiganym@example.com', roles: 'Бета — админ' },
+  { email: 'rustem@example.com', roles: 'Гамма — админ' },
+  { email: 'tamerlan@example.com', roles: 'Альфа — сотрудник' },
 ];
 
 /**
@@ -110,11 +102,7 @@ export function LoginPage() {
                       {a.email}
                     </Anchor>
                   </Table.Td>
-                  <Table.Td c="dimmed">
-                    {a.roles.map((role) => (
-                      <div key={role}>{role}</div>
-                    ))}
-                  </Table.Td>
+                  <Table.Td c="dimmed">{a.roles}</Table.Td>
                 </Table.Tr>
               ))}
             </Table.Tbody>
