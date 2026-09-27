@@ -21,7 +21,8 @@ import { errorMessage } from '../lib/errors';
 const DEMO_ACCOUNTS = [
   {
     email: 'timur@example.com',
-    roles: 'Альфа — админ, Бета — менеджер, Гамма — сотрудник, Дельта — модуль отключён',
+    roles:
+      'Альфа — админ, Бета — менеджер, Гамма — сотрудник, Дельта — админ (модуль «Пользователи» не подключён)',
   },
   { email: 'aiganym@example.com', roles: 'Бета — админ' },
   { email: 'rustem@example.com', roles: 'Гамма — админ' },
