@@ -33,6 +33,8 @@ export interface Me {
 export interface MyOrganization {
   id: string;
   name: string;
+  description: string | null;
+  branches: BranchRef[];
   role: Role;
   permissions: string[];
   modules: string[];

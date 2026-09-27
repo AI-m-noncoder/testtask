@@ -82,6 +82,7 @@ const ORGANIZATIONS = [
   {
     key: 'alpha',
     name: 'Альфа Логистик',
+    description: 'Грузоперевозки и складская логистика по Казахстану',
     branches: [
       { name: 'Алматы', address: 'г. Алматы, пр. Абая, 150' },
       { name: 'Астана', address: 'г. Астана, ул. Кенесары, 40' },
@@ -92,6 +93,7 @@ const ORGANIZATIONS = [
   {
     key: 'beta',
     name: 'Бета Ритейл',
+    description: 'Сеть магазинов бытовой техники в Алматы',
     branches: [
       { name: 'Центральный', address: 'г. Алматы, ул. Толе би, 101' },
       { name: 'Северный', address: 'г. Алматы, мкр. Жетысу-2, 7' },
@@ -101,6 +103,7 @@ const ORGANIZATIONS = [
   {
     key: 'gamma',
     name: 'Гамма Строй',
+    description: 'Строительство жилых комплексов в Астане и пригороде',
     branches: [
       { name: 'Главный офис', address: 'г. Астана, пр. Мангилик Ел, 55' },
       { name: 'Объект №1', address: 'г. Астана, ул. Сыганак, 18' },
@@ -112,12 +115,14 @@ const ORGANIZATIONS = [
   {
     key: 'delta',
     name: 'Дельта Консалтинг',
+    description: 'Бухгалтерский и налоговый консалтинг',
     branches: [{ name: 'Офис', address: 'г. Караганда, ул. Бухар-Жырау, 64' }],
     modules: [Module.Crm],
   },
 ] as const satisfies ReadonlyArray<{
   key: string;
   name: string;
+  description: string;
   branches: ReadonlyArray<{ name: string; address: string }>;
   modules: readonly ModuleKey[];
 }>;
@@ -195,6 +200,7 @@ export async function seed(prisma: PrismaClient): Promise<boolean> {
         const created = await tx.organization.create({
           data: {
             name: org.name,
+            description: org.description,
             branches: { create: org.branches.map((b) => ({ name: b.name, address: b.address })) },
             modules: { create: org.modules.map((moduleKey) => ({ moduleKey })) },
           },

@@ -103,6 +103,18 @@ describe('Authentication and organization access (e2e)', () => {
       });
     });
 
+    it('describes each organization with its own branches only', async () => {
+      const res = await timur.get('/me/organizations').expect(200);
+      const alpha = res.body.find((o: { name: string }) => o.name === 'Альфа Логистик');
+      expect(alpha.description).toMatch(/логистика/);
+      expect(alpha.branches.map((b: { name: string }) => b.name)).toEqual([
+        'Алматы',
+        'Астана',
+        'Шымкент',
+      ]);
+      expect(alpha.branches[0].address).toMatch(/^г\. Алматы/);
+    });
+
     it('does not include organizations the user was removed from', async () => {
       const aiganym = as(app, await login(app, 'aiganym@example.com'));
       const res = await aiganym.get('/me/organizations').expect(200);

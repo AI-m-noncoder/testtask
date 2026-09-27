@@ -16,7 +16,10 @@ export class MeService {
     return user;
   }
 
-  /** Organizations the user can switch to, with what they're allowed to do in each */
+  /**
+   * Organizations the user can switch to, with what they're allowed to do in each.
+   * Also what the organization is: description, branches and connected modules.
+   */
   async getOrganizations(userId: string) {
     const memberships = await this.prisma.membership.findMany({
       where: { userId, deletedAt: null, status: 'ACTIVE' },
@@ -26,6 +29,8 @@ export class MeService {
           select: {
             id: true,
             name: true,
+            description: true,
+            branches: { select: { id: true, name: true, address: true }, orderBy: { name: 'asc' } },
             modules: { where: { enabled: true }, select: { moduleKey: true } },
           },
         },
@@ -44,6 +49,8 @@ export class MeService {
     return memberships.map(({ organization, role }) => ({
       id: organization.id,
       name: organization.name,
+      description: organization.description,
+      branches: organization.branches,
       role: { id: role.id, key: role.key, name: role.name, level: role.level },
       permissions: role.permissions.map((p) => p.permission.key).sort(),
       modules: organization.modules.map((m) => m.moduleKey).sort(),

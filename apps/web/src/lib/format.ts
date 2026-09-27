@@ -11,6 +11,16 @@ const dateTimeFormat = new Intl.DateTimeFormat('ru-RU', {
 export const formatDate = (iso: string) => dateFormat.format(new Date(iso));
 export const formatDateTime = (iso: string) => dateTimeFormat.format(new Date(iso));
 
+const MODULE_LABELS: Record<string, string> = {
+  users: 'Пользователи',
+  crm: 'CRM',
+  sales: 'Продажи',
+  warehouse: 'Склад',
+  tasks: 'Задачи',
+  reports: 'Отчёты',
+};
+export const moduleLabel = (key: string) => MODULE_LABELS[key] ?? key;
+
 const ROLE_COLORS: Record<string, string> = { admin: 'grape', manager: 'blue', employee: 'gray' };
 export const roleColor = (key: string) => ROLE_COLORS[key] ?? 'teal';
 
